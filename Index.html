@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>별똥별 잡기</title>
+    <style>
+        /* 기본 스타일 및 폰트 설정 */
+        @import url('https://fonts.googleapis.com/css2?family=DotGothic16&display=swap');
+
+        body {
+            margin: 0;
+            background-color: #0c0c27; /* 어두운 밤하늘 색 */
+            color: #fff;
+            font-family: 'DotGothic16', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            text-shadow: 2px 2px #000;
+        }
+
+        /* 게임 컨테이너 */
+        #game-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        /* 별똥별 스타일 */
+        .star {
+            position: absolute;
+            width: 12px; /* 별 크기 증가 */
+            height: 12px; /* 별 크기 증가 */
+            padding: 8px; /* 클릭 영역 확장을 위한 투명 패딩 */
+            background-color: #ffff00;
+            background-clip: content-box; /* 패딩 영역에는 배경색을 적용하지 않음 */
+            box-shadow: 0 0 10px #ffff00, 0 0 15px #ffff00;
+            image-rendering: pixelated;
+            pointer-events: auto; /* 별만 클릭 가능하도록 설정 */
+        }
+        
+        /* 별똥별이 떨어지는 애니메이션 */
+        @keyframes fall {
+            from {
+                transform: translateY(-20px) rotate(-45deg);
+            }
+            to {
+                transform: translateY(105vh) rotate(-45deg);
+            }
+        }
+
+        /* 게임 UI (점수, 타이머) */
+        #ui-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 24px;
+            z-index: 10;
+            pointer-events: none; /* UI가 클릭을 방해하지 않도록 설정 */
+        }
+
+        /* 화면 중앙에 뜨는 메시지 (시작, 종료, 소원) */
+        .screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 20;
+        }
+
+        #start-screen h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        #end-screen {
+            display: none; /* 처음에는 숨김 */
+        }
+
+        #end-screen h2 {
+            font-size: 40px;
+        }
+
+        #end-screen p {
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        
+        button {
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 20px;
+            padding: 10px 20px;
+            background-color: #f0f0f0;
+            color: #111;
+            border: 2px solid #111;
+            cursor: pointer;
+            box-shadow: 4px 4px #000;
+            text-shadow: none;
+            transition: all 0.1s ease-in-out;
+        }
+
+        button:hover {
+            background-color: #ddd;
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px #000;
+        }
+        
+        button:active {
+            transform: translate(4px, 4px);
+            box-shadow: none;
+        }
+
+        /* "Make a wish!" 메시지 */
+        #wish-message {
+            font-size: 32px;
+            opacity: 0;
+            transition: opacity 0.5s ease-out;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- 게임 UI -->
+        <div id="ui-container">
+            <div id="score">Score: 0</div>
+            <div id="timer">Time: 20</div>
+        </div>
+
+        <!-- 시작 화면 -->
+        <div id="start-screen" class="screen">
+            <h1>별똥별 잡기</h1>
+            <p>떨어지는 별똥별을 클릭하세요!</p>
+            <button id="start-button">게임 시작</button>
+        </div>
+
+        <!-- 게임 종료 화면 -->
+        <div id="end-screen" class="screen">
+            <h2>게임 종료!</h2>
+            <p id="final-score">최종 점수: 0</p>
+            <button id="restart-button">다시하기</button>
+        </div>
+        
+        <!-- 소원 메시지 -->
+        <div id="wish-message" class="screen">
+            Make a wish!
+        </div>
+    </div>
+
+    <script>
+        // DOM 요소 가져오기
+        const gameContainer = document.getElementById('game-container');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const startScreen = document.getElementById('start-screen');
+        const endScreen = document.getElementById('end-screen');
+        const startButton = document.getElementById('start-button');
+        const restartButton = document.getElementById('restart-button');
+        const finalScoreDisplay = document.getElementById('final-score');
+        const wishMessage = document.getElementById('wish-message');
+
+        // 게임 변수
+        let score = 0;
+        let timeLeft = 20;
+        let gameTimer;
+        let starGenerator;
+        let isGameActive = false;
+
+        // 게임 시작 함수
+        function startGame() {
+            // 초기화
+            score = 0;
+            timeLeft = 20;
+            scoreDisplay.textContent = `Score: ${score}`;
+            timerDisplay.textContent = `Time: ${timeLeft}`;
+            isGameActive = true;
+
+            // 화면 전환
+            startScreen.style.display = 'none';
+            endScreen.style.display = 'none';
+
+            // 타이머 시작
+            gameTimer = setInterval(() => {
+                timeLeft--;
+                timerDisplay.textContent = `Time: ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    endGame();
+                }
+            }, 1000);
+
+            // 별똥별 생성 시작
+            starGenerator = setInterval(createStar, 400); // 0.4초마다 생성
+        }
+
+        // 게임 종료 함수
+        function endGame() {
+            isGameActive = false;
+            clearInterval(gameTimer);
+            clearInterval(starGenerator);
+
+            // 남은 별들 제거
+            const remainingStars = document.querySelectorAll('.star');
+            remainingStars.forEach(star => star.remove());
+            
+            // 종료 화면 표시
+            finalScoreDisplay.textContent = `최종 점수: ${score}`;
+            endScreen.style.display = 'block';
+        }
+
+        // 별똥별 생성 함수
+        function createStar() {
+            if (!isGameActive) return;
+
+            const star = document.createElement('div');
+            star.classList.add('star');
+
+            // 랜덤 위치 및 속도 설정
+            const startX = Math.random() * window.innerWidth;
+            const duration = Math.random() * 3 + 4; // 4~7초 사이의 속도
+
+            star.style.left = `${startX}px`;
+            star.style.top = '-20px';
+            star.style.animation = `fall ${duration}s linear`;
+            
+            // 별 클릭 이벤트
+            star.addEventListener('click', () => {
+                score++;
+                scoreDisplay.textContent = `Score: ${score}`;
+                showWishMessage();
+                star.remove();
+            });
+            
+            // 별이 화면 밖으로 나가면 제거
+            star.addEventListener('animationend', () => {
+                star.remove();
+            });
+
+            gameContainer.appendChild(star);
+        }
+
+        // "Make a wish!" 메시지 표시 함수
+        function showWishMessage() {
+            wishMessage.style.opacity = 1;
+            setTimeout(() => {
+                wishMessage.style.opacity = 0;
+            }, 1000); // 1초 후에 사라짐
+        }
+
+        // 이벤트 리스너
+        startButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', startGame);
+
+    </script>
+</body>
+</html>
+
