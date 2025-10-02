@@ -118,6 +118,23 @@
             box-shadow: none;
         }
 
+        /* 속도 조절 버튼 */
+        #difficulty-selector {
+            margin-bottom: 30px;
+        }
+        .difficulty-btn {
+            margin: 0 10px;
+            opacity: 0.6;
+        }
+        .difficulty-btn.active {
+            opacity: 1;
+            box-shadow: 6px 6px #000;
+        }
+        .difficulty-btn:not(.active):hover {
+            opacity: 0.8;
+        }
+
+
         /* "Make a wish!" 메시지 */
         #wish-message {
             font-size: 32px;
@@ -140,6 +157,11 @@
         <div id="start-screen" class="screen">
             <h1>별똥별 잡기</h1>
             <p>떨어지는 별똥별을 클릭하세요!</p>
+            <div id="difficulty-selector">
+                <button class="difficulty-btn" data-speed="slow">느림</button>
+                <button class="difficulty-btn active" data-speed="normal">보통</button>
+                <button class="difficulty-btn" data-speed="fast">빠름</button>
+            </div>
             <button id="start-button">게임 시작</button>
         </div>
 
@@ -167,6 +189,7 @@
         const restartButton = document.getElementById('restart-button');
         const finalScoreDisplay = document.getElementById('final-score');
         const wishMessage = document.getElementById('wish-message');
+        const difficultyButtons = document.querySelectorAll('.difficulty-btn');
 
         // 게임 변수
         let score = 0;
@@ -174,6 +197,7 @@
         let gameTimer;
         let starGenerator;
         let isGameActive = false;
+        let gameSpeed = 'normal'; // 기본 속도: 보통
 
         // 게임 시작 함수
         function startGame() {
@@ -225,7 +249,17 @@
 
             // 랜덤 위치 및 속도 설정
             const startX = Math.random() * window.innerWidth;
-            const duration = Math.random() * 3 + 4; // 4~7초 사이의 속도
+            let duration;
+
+            // 게임 속도에 따라 떨어지는 시간 조절
+            if (gameSpeed === 'slow') {
+                duration = Math.random() * 3 + 6; // 6~9초
+            } else if (gameSpeed === 'fast') {
+                duration = Math.random() * 2 + 2; // 2~4초
+            } else { // 'normal'
+                duration = Math.random() * 3 + 4; // 4~7초
+            }
+
 
             star.style.left = `${startX}px`;
             star.style.top = '-20px';
@@ -254,6 +288,15 @@
                 wishMessage.style.opacity = 0;
             }, 1000); // 1초 후에 사라짐
         }
+
+        // 속도 조절 버튼 이벤트 리스너
+        difficultyButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                difficultyButtons.forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                gameSpeed = button.dataset.speed;
+            });
+        });
 
         // 이벤트 리스너
         startButton.addEventListener('click', startGame);
